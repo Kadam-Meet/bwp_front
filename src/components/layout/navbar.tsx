@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 
 export function Navbar() {
   const location = useLocation()
+  const userRaw = typeof window !== 'undefined' ? localStorage.getItem('teatok_user') : null
+  const user = userRaw ? JSON.parse(userRaw) as { name?: string; alias?: string | null; isAnonymous?: boolean } : null
   
   const navItems = [
     { name: "Feed", href: "/feed", icon: Home },
@@ -52,6 +54,9 @@ export function Navbar() {
 
         {/* Right side actions */}
         <div className="flex items-center space-x-3">
+          {user && (
+            <span className="text-sm text-muted-foreground hidden md:inline">{user.alias || user.name}</span>
+          )}
           <ThemeToggle />
           <Button 
             asChild 

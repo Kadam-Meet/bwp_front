@@ -120,6 +120,27 @@ export async function createUser(data: { name: string; email: string; password: 
   return res.json()
 }
 
+export async function loginUser(data: { email: string; password: string }): Promise<ApiUser & { alias?: string | null; anonymousId?: string | null }> {
+  const res = await fetch(`${API_BASE}/users/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'unknown' }))
+    throw new Error(err.error || 'login_failed')
+  }
+  return res.json()
+}
+
+export async function createAnonymous(): Promise<{ id: string | null; name: string; email: null; alias: string; anonymousId: string }> {
+  const res = await fetch(`${API_BASE}/users/anonymous`, {
+    method: "POST",
+  })
+  if (!res.ok) throw new Error("Failed to create anonymous user")
+  return res.json()
+}
+
 // Rooms API
 export async function getRooms(trending?: boolean): Promise<ApiRoom[]> {
   const url = trending !== undefined ? `${API_BASE}/rooms?trending=${trending}` : `${API_BASE}/rooms`

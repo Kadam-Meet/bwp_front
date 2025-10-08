@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
+import { createUser as apiCreateUser, loginUser as apiLoginUser, createAnonymous as apiCreateAnonymous } from "@/lib/api"
 
 export default function Auth() {
   const [showPassword, setShowPassword] = useState(false)
@@ -16,18 +17,58 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent, type: 'signin' | 'signup' | 'anonymous') => {
     e.preventDefault()
     setIsLoading(true)
-    
-    // Simulate authentication
-    setTimeout(() => {
-      setIsLoading(false)
+    try {
+      const form = e.target as HTMLFormElement
+      const formData = new FormData(form)
+      const email = String(formData.get('email') || '').trim()
+      const password = String(formData.get('password') || '').trim()
+      const name = String(formData.get('name') || '').trim()
+
+      if (type !== 'anonymous') {
+        const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+        if (!isEmailValid) {
+          throw new Error('invalid_email')
+        }
+        if (password.length < 6) {
+          throw new Error('weak_password')
+        }
+      }
+
+      let userSession: any
+      if (type === 'signup') {
+        const displayName = name || email.split('@')[0]
+        userSession = await apiCreateUser({ name: displayName, email, password })
+      } else if (type === 'signin') {
+        userSession = await apiLoginUser({ email, password })
+      } else {
+        userSession = await apiCreateAnonymous()
+      }
+
+      localStorage.setItem('teatok_user', JSON.stringify({
+        id: userSession.id ?? null,
+        name: userSession.name ?? userSession.alias,
+        email: userSession.email ?? null,
+        alias: userSession.alias ?? null,
+        anonymousId: userSession.anonymousId ?? null,
+        isAnonymous: type === 'anonymous',
+      }))
+
       toast({
-        title: type === 'anonymous' ? "Welcome, Anonymous!" : "Welcome to TeaTok!",
-        description: type === 'anonymous' 
-          ? "You're now browsing anonymously. Start spilling some tea!" 
-          : "Ready to spill some tea?",
+        title: type === 'anonymous' ? 'Welcome, Anonymous!' : 'Welcome to TeaTok!',
+        description: type === 'anonymous' ? "You're now browsing anonymously. Start spilling some tea!" : 'Ready to spill some tea?',
       })
       navigate('/feed')
-    }, 1500)
+    } catch (err: any) {
+      const code = err?.message || 'auth_error'
+      let description = 'Something went wrong. Please try again.'
+      if (code === 'invalid_email') description = 'Please enter a valid email address.'
+      if (code === 'weak_password') description = 'Password must be at least 6 characters.'
+      if (code === 'email already exists' || code === 'conflict' || code === '409') description = 'This email is already registered.'
+      if (code === 'invalid_credentials') description = 'Incorrect email or password.'
+      toast({ title: 'Authentication failed', description, variant: 'destructive' })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -77,6 +118,7 @@ export default function Auth() {
                     <label className="text-sm font-medium">Email</label>
                     <div className="relative">
                       <Input
+                        name="email"
                         type="email"
                         placeholder="spill@teatime.com"
                         className="pl-10"
@@ -90,6 +132,7 @@ export default function Auth() {
                     <label className="text-sm font-medium">Password</label>
                     <div className="relative">
                       <Input
+                        name="password"
                         type={showPassword ? "text" : "password"}
                         placeholder="Your secret brew..."
                         className="pl-10 pr-10"
@@ -125,9 +168,21 @@ export default function Auth() {
               <form onSubmit={(e) => handleSubmit(e, 'signup')}>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
+                    <label className="text-sm font-medium">Name</label>
+                    <div className="relative">
+                      <Input
+                        name="name"
+                        type="text"
+                        placeholder="Your display name"
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
                     <label className="text-sm font-medium">Email</label>
                     <div className="relative">
                       <Input
+                        name="email"
                         type="email"
                         placeholder="newbie@teatime.com"
                         className="pl-10"
@@ -141,6 +196,7 @@ export default function Auth() {
                     <label className="text-sm font-medium">Password</label>
                     <div className="relative">
                       <Input
+                        name="password"
                         type={showPassword ? "text" : "password"}
                         placeholder="Create your secret..."
                         className="pl-10 pr-10"
