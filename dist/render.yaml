@@ -24,6 +24,8 @@ services:
     envVars:
       - key: VITE_AGORA_APP_ID
         sync: false
+      - key: VITE_API_URL
+        value: https://bwp-back-1.onrender.com
     routes:
       - type: rewrite
         source: /*

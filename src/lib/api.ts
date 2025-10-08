@@ -43,11 +43,27 @@ export type ApiReaction = {
 
 // API base URL comes from env for consistency across environments.
 // Set VITE_API_URL to your hosted backend (e.g., https://api.example.com)
-// Falls back to "/api" to work with Vite dev proxy.
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "/api"
+// Falls back to production URL, then "/api" for local dev
+const getApiBase = () => {
+  const envUrl = import.meta.env.VITE_API_URL as string | undefined
+  if (envUrl) {
+    return envUrl.replace(/\/$/, "")
+  }
+  
+  // Production fallback
+  if (import.meta.env.PROD) {
+    return "https://bwp-back-1.onrender.com"
+  }
+  
+  // Development fallback
+  return "/api"
+}
+
+const API_BASE = getApiBase()
 
 // Debug logging
 console.log('🔧 [API] Environment VITE_API_URL:', import.meta.env.VITE_API_URL)
+console.log('🔧 [API] Environment PROD:', import.meta.env.PROD)
 console.log('🔧 [API] Resolved API_BASE:', API_BASE)
 
 // Agora
