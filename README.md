@@ -71,3 +71,20 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Environment configuration
+
+Set your backend once and use it everywhere without opening Atlas:
+
+```
+# .env (create at project root)
+VITE_API_BASE_URL=https://your-hosted-backend.example.com
+
+# Optional: override dev proxy target for local development
+VITE_DEV_PROXY_TARGET=http://localhost:5500
+```
+
+- The app uses `VITE_API_BASE_URL` for all requests in `src/lib/api.ts`.
+- During local dev, if `VITE_API_BASE_URL` is not set, calls go to `/api` and are proxied by Vite to `VITE_DEV_PROXY_TARGET` (defaults to `http://localhost:5500`).
+
+After updating `.env`, restart the dev server.

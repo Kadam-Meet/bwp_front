@@ -41,7 +41,10 @@ export type ApiReaction = {
   hearts: number
 }
 
-const API_BASE = "/api"
+// API base URL comes from env for consistency across environments.
+// Set VITE_API_URL to your hosted backend (e.g., https://api.example.com)
+// Falls back to "/api" to work with Vite dev proxy.
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "/api"
 
 // Agora
 export async function getRtcToken(params: { channel: string; uid?: string | number; role?: 'publisher' | 'subscriber'; expireSeconds?: number }): Promise<{ token: string; uid: string | number }>{
