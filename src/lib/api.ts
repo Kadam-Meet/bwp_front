@@ -46,6 +46,10 @@ export type ApiReaction = {
 // Falls back to "/api" to work with Vite dev proxy.
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "/api"
 
+// Debug logging
+console.log('🔧 [API] Environment VITE_API_URL:', import.meta.env.VITE_API_URL)
+console.log('🔧 [API] Resolved API_BASE:', API_BASE)
+
 // Agora
 export async function getRtcToken(params: { channel: string; uid?: string | number; role?: 'publisher' | 'subscriber'; expireSeconds?: number }): Promise<{ token: string; uid: string | number }>{
   const res = await fetch(`${API_BASE}/token`, {

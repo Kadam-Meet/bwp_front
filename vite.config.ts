@@ -21,7 +21,7 @@ export default defineConfig(async ({ mode }) => {
 		server: {
 			host: "::",
 			port: 8080,
-			proxy: {
+			proxy: env.VITE_API_URL ? {} : {
 				"/api": {
 					target: devProxyTarget,
 					changeOrigin: true,
