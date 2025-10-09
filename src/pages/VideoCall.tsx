@@ -1,26 +1,37 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import AgoraRTC from "agora-rtc-sdk-ng";
+import AgoraRTC, { IAgoraRTCClient, ILocalAudioTrack, ILocalVideoTrack } from "agora-rtc-sdk-ng";
+import type { IAgoraRTCRemoteUser } from "agora-rtc-sdk-ng";
+import type IRemoteUser from "agora-rtc-sdk-ng";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { getRtcToken } from "@/lib/api";
 
+type RemoteUserLite = IAgoraRTCRemoteUser;
+
+type JoinParams = {
+  appId: string;
+  channel: string;
+  token: string | null;
+  uid?: string | number | null;
+};
+
 export default function VideoCall() {
-  const clientRef = useRef(null);
-  const localAudioRef = useRef(null);
-  const localVideoRef = useRef(null);
+  const clientRef = useRef<IAgoraRTCClient | null>(null);
+  const localAudioRef = useRef<ILocalAudioTrack | null>(null);
+  const localVideoRef = useRef<ILocalVideoTrack | null>(null);
 
-  const localPlayerRef = useRef(null);
-  const [remoteUsers, setRemoteUsers] = useState([]);
+  const localPlayerRef = useRef<HTMLDivElement | null>(null);
+  const [remoteUsers, setRemoteUsers] = useState<RemoteUserLite[]>([]);
 
-  const [appId, setAppId] = useState(import.meta.env.VITE_AGORA_APP_ID || "");
-  const [channel, setChannel] = useState("");
-  const [token, setToken] = useState("");
-  const [uid, setUid] = useState("");
-  const [joined, setJoined] = useState(false);
-  const [publishing, setPublishing] = useState(false);
-  const [joining, setJoining] = useState(false);
+  const [appId, setAppId] = useState<string>(import.meta.env.VITE_AGORA_APP_ID || "");
+  const [channel, setChannel] = useState<string>("");
+  const [token, setToken] = useState<string>("");
+  const [uid, setUid] = useState<string>("");
+  const [joined, setJoined] = useState<boolean>(false);
+  const [publishing, setPublishing] = useState<boolean>(false);
+  const [joining, setJoining] = useState<boolean>(false);
   const { toast } = useToast();
 
   // Stable client instance
@@ -34,20 +45,20 @@ export default function VideoCall() {
   // Event listeners
   useEffect(() => {
     const client = ensureClient;
-    const handleUserPublished = async (user, mediaType) => {
+    const handleUserPublished = async (user: RemoteUserLite, mediaType: "audio" | "video") => {
       await client.subscribe(user, mediaType);
       if (mediaType === "audio" && user.audioTrack) {
         user.audioTrack.play();
       }
-      setRemoteUsers(Array.from(client.remoteUsers));
+      setRemoteUsers(Array.from(client.remoteUsers) as unknown as RemoteUserLite[]);
     };
 
     const handleUserUnpublished = () => {
-      setRemoteUsers(Array.from(client.remoteUsers));
+      setRemoteUsers(Array.from(client.remoteUsers) as unknown as RemoteUserLite[]);
     };
 
-    const handleUserJoined = () => setRemoteUsers(Array.from(client.remoteUsers));
-    const handleUserLeft = () => setRemoteUsers(Array.from(client.remoteUsers));
+    const handleUserJoined = () => setRemoteUsers(Array.from(client.remoteUsers) as unknown as RemoteUserLite[]);
+    const handleUserLeft = () => setRemoteUsers(Array.from(client.remoteUsers) as unknown as RemoteUserLite[]);
 
     client.on("user-published", handleUserPublished);
     client.on("user-unpublished", handleUserUnpublished);
@@ -62,7 +73,7 @@ export default function VideoCall() {
     };
   }, [ensureClient]);
 
-  const join = async ({ appId, channel, token, uid }) => {
+  const join = async ({ appId, channel, token, uid }: JoinParams) => {
     if (!appId || !channel) {
       toast({ title: "Missing fields", description: "Please enter App ID and Channel", variant: "destructive" });
       return;
@@ -73,7 +84,7 @@ export default function VideoCall() {
       AgoraRTC.setLogLevel(2); // warn
       // If no token is provided, request one from server (for projects with App Certificate enabled)
       let resolvedToken = token?.trim() || "";
-      let resolvedUid = uid && uid !== "" ? uid : null;
+      let resolvedUid: string | number | null = uid && uid !== "" ? uid : null;
       if (!resolvedToken) {
         try {
           const resp = await getRtcToken({ channel: channel.trim(), uid: resolvedUid ?? 0, role: 'publisher', expireSeconds: 3600 });
@@ -103,7 +114,7 @@ export default function VideoCall() {
 
       setJoined(true);
       toast({ title: "Joined", description: `Channel "${channel}" joined successfully.` });
-    } catch (error) {
+    } catch (error: unknown) {
       // Clean up partially created tracks if any
       try {
         if (localAudioRef.current) {
@@ -187,7 +198,7 @@ export default function VideoCall() {
                 </div>
               )}
               {remoteUsers.map((user) => (
-                <div key={user.uid} className="w-full aspect-video bg-muted rounded overflow-hidden">
+                <div key={user.uid as string | number} className="w-full aspect-video bg-muted rounded overflow-hidden">
                   <div id={`remote-player-${user.uid}`} className="w-full h-full" ref={(el) => {
                     if (!el) return;
                     if (user.videoTrack) {
@@ -204,3 +215,5 @@ export default function VideoCall() {
     </div>
   );
 }
+
+

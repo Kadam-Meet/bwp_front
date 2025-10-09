@@ -6,13 +6,31 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/navbar"
 
+interface Post {
+  id: string
+  author: string
+  alias: string
+  content: string
+  timestamp: string
+  duration: string
+  reactions: {
+    tea: number
+    spicy: number
+    cap: number
+    hearts: number
+  }
+  replies: number
+  category: string
+  isVoiceNote?: boolean
+}
+
 import { getPosts, getPostReactions, addReaction } from "@/lib/api"
 
 export default function Feed() {
-  const [posts, setPosts] = useState([])
+  const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
 
-  const handleReaction = async (postId, type) => {
+  const handleReaction = async (postId: string, type: keyof Post['reactions']) => {
     try {
       // For demo purposes, we'll use a dummy userId
       // In a real app, this would come from authentication
@@ -31,7 +49,7 @@ export default function Feed() {
     }
   }
 
-  const getReactionIcon = (type) => {
+  const getReactionIcon = (type: string) => {
     switch (type) {
       case 'tea': return '☕'
       case 'spicy': return '🌶️'
@@ -47,7 +65,7 @@ export default function Feed() {
         console.log('Received posts:', apiPosts.length)
         
         // Map API posts to UI shape
-        const uiPosts = apiPosts.map((p) => ({
+        const uiPosts: Post[] = apiPosts.map((p) => ({
           id: p.id,
           author: p.author.name,
           alias: p.author.alias || "Anon",
@@ -88,7 +106,7 @@ export default function Feed() {
   }, [])
 
 
-  const getCategoryColor = (category) => {
+  const getCategoryColor = (category: string) => {
     switch (category) {
       case 'Celeb Gossip': return 'gradient-primary'
       case 'Movies': return 'gradient-accent'
@@ -211,7 +229,7 @@ export default function Feed() {
                             key={type}
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleReaction(post.id, type)}
+                            onClick={() => handleReaction(post.id, type as keyof Post['reactions'])}
                             className="flex items-center space-x-1 hover-scale transition-smooth p-2 rounded-full"
                           >
                             <span className="text-base">{getReactionIcon(type)}</span>

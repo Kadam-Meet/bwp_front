@@ -14,11 +14,11 @@ export default function Auth() {
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const handleSubmit = async (e, type) => {
+  const handleSubmit = async (e: React.FormEvent, type: 'signin' | 'signup' | 'anonymous') => {
     e.preventDefault()
     setIsLoading(true)
     try {
-      const form = e.target
+      const form = e.target as HTMLFormElement
       const formData = new FormData(form)
       const email = String(formData.get('email') || '').trim()
       const password = String(formData.get('password') || '').trim()
@@ -34,7 +34,7 @@ export default function Auth() {
         }
       }
 
-      let userSession
+      let userSession: any
       if (type === 'signup') {
         const displayName = name || email.split('@')[0]
         userSession = await apiCreateUser({ name: displayName, email, password })
@@ -58,7 +58,7 @@ export default function Auth() {
         description: type === 'anonymous' ? "You're now browsing anonymously. Start spilling some tea!" : 'Ready to spill some tea?',
       })
       navigate('/feed')
-    } catch (err) {
+    } catch (err: any) {
       const code = err?.message || 'auth_error'
       let description = 'Something went wrong. Please try again.'
       if (code === 'invalid_email') description = 'Please enter a valid email address.'
@@ -243,7 +243,7 @@ export default function Auth() {
           </CardHeader>
           <CardFooter>
             <Button 
-              onClick={(e) => handleSubmit(e, 'anonymous')}
+              onClick={(e) => handleSubmit(e as any, 'anonymous')}
               variant="outline" 
               className="w-full neon-border hover-glow"
               disabled={isLoading}

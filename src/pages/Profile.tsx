@@ -7,7 +7,26 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Navbar } from "@/components/layout/navbar"
 
-const badges = [
+interface Badge {
+  id: string
+  name: string
+  description: string
+  icon: string
+  earned: boolean
+  rarity: "common" | "rare" | "legendary"
+}
+
+interface PostHistory {
+  id: string
+  content: string
+  category: string
+  timestamp: string
+  reactions: number
+  replies: number
+  status: "active" | "expired"
+}
+
+const badges: Badge[] = [
   {
     id: "1",
     name: "Tea Connoisseur",
@@ -42,7 +61,7 @@ const badges = [
   }
 ]
 
-const recentPosts = [
+const recentPosts: PostHistory[] = [
   {
     id: "1",
     content: "That new superhero movie everyone's hyping... it's mid at best. The plot holes are bigger than the hero's ego.",
@@ -84,7 +103,7 @@ export default function Profile() {
     streak: 23
   }
 
-  const getBadgeRarityColor = (rarity) => {
+  const getBadgeRarityColor = (rarity: string) => {
     switch (rarity) {
       case "legendary": return "gradient-primary"
       case "rare": return "gradient-accent" 

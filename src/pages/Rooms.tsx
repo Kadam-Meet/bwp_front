@@ -6,14 +6,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Navbar } from "@/components/layout/navbar"
-import { getRooms } from "@/lib/api"
+import { getRooms, ApiRoom } from "@/lib/api"
+
+interface Room {
+  id: string
+  name: string
+  description: string
+  icon: string
+  members: number
+  recentPosts: number
+  trending: boolean
+  gradient: string
+  lastActivity: string
+}
 
 // Rooms will be loaded from the API
 
 export default function Rooms() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [rooms, setRooms] = useState([])
-  const [filteredRooms, setFilteredRooms] = useState([])
+  const [rooms, setRooms] = useState<ApiRoom[]>([])
+  const [filteredRooms, setFilteredRooms] = useState<ApiRoom[]>([])
   const [loading, setLoading] = useState(true)
 
   // Load rooms on component mount
@@ -32,7 +44,7 @@ export default function Rooms() {
     loadRooms()
   }, [])
 
-  const handleSearch = (query) => {
+  const handleSearch = (query: string) => {
     setSearchQuery(query)
     if (query.trim() === "") {
       setFilteredRooms(rooms)
