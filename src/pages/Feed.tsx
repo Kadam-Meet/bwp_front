@@ -206,8 +206,15 @@ export default function Feed() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       ) : (
-                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="more" disabled>
-                          <MoreHorizontal className="h-4 w-4" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground"
+                          aria-label="delete post (disabled)"
+                          title="Only the author can delete this post"
+                          disabled
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
