@@ -182,4 +182,15 @@ export async function getPostReactions(postId: string): Promise<{ reactions: Api
   return res.json()
 }
 
+export async function deletePost(postId: string): Promise<{ success: boolean }> {
+  const res = await fetch(`${API_BASE}/posts/${postId}`, {
+    method: "DELETE",
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'unknown' }))
+    throw new Error(err.error || 'delete_failed')
+  }
+  return res.json()
+}
+
 

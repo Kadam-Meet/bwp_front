@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from "react"
-import { Heart, MessageCircle, Share2, MoreHorizontal, Clock, Flame, Coffee, Flag } from "lucide-react"
+import { Heart, MessageCircle, Share2, MoreHorizontal, Clock, Flame, Coffee, Flag, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/navbar"
 
-import { getPosts, getPostReactions, addReaction } from "@/lib/api"
+import { getPosts, getPostReactions, addReaction, deletePost } from "@/lib/api"
 
 export default function Feed() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [deletingIds, setDeletingIds] = useState(new Set())
 
   const handleReaction = async (postId, type) => {
     try {
@@ -37,6 +38,24 @@ export default function Feed() {
       case 'spicy': return '🌶️'
       case 'cap': return '🧢'
       default: return '❤️'
+    }
+  }
+
+  const handleDelete = async (postId) => {
+    if (!window.confirm('Delete this post? This cannot be undone.')) return
+    try {
+      setDeletingIds(new Set([ ...deletingIds, postId ]))
+      await deletePost(postId)
+      setPosts(prev => prev.filter(p => p.id !== postId))
+    } catch (e) {
+      console.error('Failed to delete post', e)
+      alert('Failed to delete the post.')
+    } finally {
+      setDeletingIds(prev => {
+        const next = new Set(prev)
+        next.delete(postId)
+        return next
+      })
     }
   }
   useEffect(() => {
@@ -159,9 +178,21 @@ export default function Feed() {
                       <Badge variant="secondary" className="text-xs">
                         {post.category}
                       </Badge>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={() => handleDelete(post.id)}
+                          disabled={deletingIds.has(post.id)}
+                          title="Delete post"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
