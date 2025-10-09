@@ -8,16 +8,10 @@ export function ThemeProvider({
   enableSystem = true,
   disableTransitionOnChange = false,
   ...props 
-}: {
-  children: React.ReactNode
-  attribute?: string | string[]
-  defaultTheme?: string
-  enableSystem?: boolean
-  disableTransitionOnChange?: boolean
 }) {
   return (
     <NextThemesProvider 
-      attribute={attribute as any}
+      attribute={attribute}
       defaultTheme={defaultTheme}
       enableSystem={enableSystem}
       disableTransitionOnChange={disableTransitionOnChange}

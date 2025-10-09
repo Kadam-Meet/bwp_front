@@ -23,8 +23,8 @@ export default function Create() {
   const [selectedRoom, setSelectedRoom] = useState("")
   const [selectedDuration, setSelectedDuration] = useState("24h")
   const [isRecording, setIsRecording] = useState(false)
-  const [postType, setPostType] = useState<"text" | "voice">("text")
-  const [rooms, setRooms] = useState<any[]>([])
+  const [postType, setPostType] = useState("text")
+  const [rooms, setRooms] = useState([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -49,7 +49,7 @@ export default function Create() {
     loadRooms()
   }, [toast])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!content.trim() || !selectedRoom) {
       toast({
@@ -149,7 +149,7 @@ export default function Create() {
               <CardTitle className="text-lg">What's brewing?</CardTitle>
             </CardHeader>
             <CardContent>
-              <Tabs value={postType} onValueChange={(value) => setPostType(value as "text" | "voice")}>
+              <Tabs value={postType} onValueChange={(value) => setPostType(value)}>
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="text" className="flex items-center space-x-2">
                     <Hash className="h-4 w-4" />

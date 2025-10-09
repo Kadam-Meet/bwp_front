@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 export function Navbar() {
   const location = useLocation()
   const userRaw = typeof window !== 'undefined' ? localStorage.getItem('teatok_user') : null
-  const user = userRaw ? JSON.parse(userRaw) as { name?: string; alias?: string | null; isAnonymous?: boolean } : null
+  const user = userRaw ? JSON.parse(userRaw) : null
   
   const navItems = [
     { name: "Feed", href: "/feed", icon: Home },
