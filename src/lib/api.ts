@@ -84,6 +84,21 @@ export async function getPosts(roomId?: string): Promise<ApiPost[]> {
   return res.json()
 }
 
+export async function deletePost(postId: string, userId: string) {
+  const res = await fetch(`${API_BASE}/posts/${postId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "x-user-id": userId,
+    },
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'unknown' }))
+    throw new Error(err.error || 'delete_failed')
+  }
+  return res.json()
+}
+
 export async function createPost(data: { 
   title: string
   content: string

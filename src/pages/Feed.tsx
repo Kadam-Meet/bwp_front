@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react"
-import { Heart, MessageCircle, Share2, MoreHorizontal, Clock, Flame, Coffee, Flag } from "lucide-react"
+import { Heart, MessageCircle, Share2, MoreHorizontal, Clock, Flame, Coffee, Flag, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
+import { Badge as UiBadge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/navbar"
+import { getPosts, getPostReactions, addReaction, deletePost as apiDeletePost } from "@/lib/api"
 
 interface Post {
   id: string
+  authorId?: string
   author: string
   alias: string
   content: string
@@ -24,11 +26,12 @@ interface Post {
   isVoiceNote?: boolean
 }
 
-import { getPosts, getPostReactions, addReaction } from "@/lib/api"
+// api imports moved above
 
 export default function Feed() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
+  const currentUserId = (typeof window !== 'undefined' && (localStorage.getItem('userId') || localStorage.getItem('anonymousUserId'))) || ""
 
   const handleReaction = async (postId: string, type: keyof Post['reactions']) => {
     try {
@@ -67,6 +70,7 @@ export default function Feed() {
         // Map API posts to UI shape
         const uiPosts: Post[] = apiPosts.map((p) => ({
           id: p.id,
+          authorId: p.authorId,
           author: p.author.name,
           alias: p.author.alias || "Anon",
           content: p.content,
@@ -104,6 +108,19 @@ export default function Feed() {
     
     loadPosts()
   }, [])
+
+  const handleDelete = async (postId: string) => {
+    try {
+      if (!currentUserId) return
+      const confirmed = window.confirm('Delete this post? This cannot be undone.')
+      if (!confirmed) return
+      await apiDeletePost(postId, currentUserId)
+      setPosts(prev => prev.filter(p => p.id !== postId))
+    } catch (error) {
+      console.error('Failed to delete post:', error)
+      alert('Failed to delete post')
+    }
+  }
 
 
   const getCategoryColor = (category: string) => {
@@ -174,12 +191,25 @@ export default function Feed() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Badge variant="secondary" className="text-xs">
+                      <UiBadge variant="secondary" className="text-xs">
                         {post.category}
-                      </Badge>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
+                      </UiBadge>
+                      {currentUserId && post.authorId && currentUserId === post.authorId ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => handleDelete(post.id)}
+                          aria-label="delete post"
+                          title="Delete post"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="more" disabled>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardHeader>

@@ -52,6 +52,12 @@ export default function Auth() {
         anonymousId: userSession.anonymousId ?? null,
         isAnonymous: type === 'anonymous',
       }))
+      if (userSession.id) {
+        localStorage.setItem('userId', String(userSession.id))
+      }
+      if (userSession.anonymousId) {
+        localStorage.setItem('anonymousUserId', String(userSession.anonymousId))
+      }
 
       toast({
         title: type === 'anonymous' ? 'Welcome, Anonymous!' : 'Welcome to TeaTok!',
