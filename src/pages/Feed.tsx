@@ -196,25 +196,27 @@ export default function Feed() {
                       </UiBadge>
                       {currentUserId && post.authorId && currentUserId === post.authorId ? (
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          variant="destructive"
+                          size="sm"
+                          className="h-8 px-3"
                           onClick={() => handleDelete(post.id)}
-                          aria-label="delete post"
+                          aria-label="Delete post"
                           title="Delete post"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
                         </Button>
                       ) : (
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground"
-                          aria-label="delete post (disabled)"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-3 text-muted-foreground"
+                          aria-label="Delete post (disabled)"
                           title="Only the author can delete this post"
                           disabled
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
                         </Button>
                       )}
                     </div>
