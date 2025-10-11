@@ -264,18 +264,14 @@ export default function RoomDetail() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-primary">{room.memberCount}</div>
-                  <div className="text-sm text-muted-foreground">Members</div>
-                </div>
+              <div className="grid grid-cols-2 gap-4 text-center">
                 <div>
                   <div className="text-2xl font-bold text-accent">{posts.length}</div>
-                  <div className="text-sm text-muted-foreground">Posts</div>
+                  <div className="text-sm text-muted-foreground">Total Posts</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-tea-orange">{room.recentPostCount}</div>
-                  <div className="text-sm text-muted-foreground">Today</div>
+                  <div className="text-sm text-muted-foreground">Posts Today</div>
                 </div>
               </div>
             </CardContent>
