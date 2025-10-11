@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge as UiBadge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/navbar"
 import { getPosts, getPostReactions, addReaction, removeReaction, deletePost as apiDeletePost } from "@/lib/api"
+import { CommentsSection } from "@/components/CommentsSection"
 
 interface Post {
   id: string
@@ -33,6 +34,7 @@ export default function Feed() {
   const [loading, setLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [userReactions, setUserReactions] = useState<Record<string, string>>({}) // postId -> reactionType
+  const [openComments, setOpenComments] = useState<Record<string, boolean>>({}) // postId -> isOpen
 
   // Save user reactions to localStorage whenever they change
   const saveUserReactions = (reactions: Record<string, string>) => {
@@ -234,6 +236,13 @@ export default function Feed() {
     }
   }
 
+  const toggleComments = (postId: string) => {
+    setOpenComments(prev => ({
+      ...prev,
+      [postId]: !prev[postId]
+    }))
+  }
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Navbar />
@@ -385,10 +394,12 @@ export default function Feed() {
                       </div>
                       
                       <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm" className="hover-scale">
-                          <MessageCircle className="h-4 w-4 mr-1" />
-                          <span className="text-xs">{post.replies}</span>
-                        </Button>
+                        <CommentsSection
+                          postId={post.id}
+                          currentUser={currentUser}
+                          isOpen={openComments[post.id] || false}
+                          onToggle={() => toggleComments(post.id)}
+                        />
                         <Button variant="ghost" size="sm" className="hover-scale">
                           <Share2 className="h-4 w-4" />
                         </Button>

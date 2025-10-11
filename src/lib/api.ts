@@ -298,4 +298,87 @@ export async function getUserStats(userId: string): Promise<{
   return res.json()
 }
 
+// Badges API
+export type ApiBadge = {
+  id: string
+  name: string
+  description: string
+  icon: string
+  rarity: 'common' | 'rare' | 'legendary'
+  earned: boolean
+  earnedAt: string | null
+  meetsRequirements: boolean
+  requirements: {
+    postsRequired: number
+    reactionsRequired: number
+    daysActive: number
+    category: string | null
+  }
+}
+
+export async function getUserBadges(userId: string): Promise<ApiBadge[]> {
+  const res = await fetch(`${API_BASE}/badges/${userId}`)
+  if (!res.ok) throw new Error("Failed to fetch user badges")
+  return res.json()
+}
+
+export async function checkAndAwardBadges(userId: string): Promise<{ newBadges: ApiBadge[]; totalNew: number }> {
+  const res = await fetch(`${API_BASE}/badges/${userId}/check`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  })
+  if (!res.ok) throw new Error("Failed to check badges")
+  return res.json()
+}
+
+// Comments API
+export type ApiComment = {
+  id: string
+  content: string
+  author: {
+    name: string
+    alias: string | null
+    anonymousId: string | null
+  }
+  createdAt: string
+  replies?: ApiComment[]
+}
+
+export async function getPostComments(postId: string): Promise<ApiComment[]> {
+  const res = await fetch(`${API_BASE}/comments/${postId}`)
+  if (!res.ok) throw new Error("Failed to fetch comments")
+  return res.json()
+}
+
+export async function createComment(data: {
+  postId: string
+  authorId: string
+  content: string
+  parentCommentId?: string
+}): Promise<ApiComment> {
+  const res = await fetch(`${API_BASE}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || "Failed to create comment")
+  }
+  return res.json()
+}
+
+export async function deleteComment(commentId: string, userId: string): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/comments/${commentId}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId }),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || "Failed to delete comment")
+  }
+  return res.json()
+}
+
 

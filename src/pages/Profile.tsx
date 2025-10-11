@@ -6,17 +6,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Navbar } from "@/components/layout/navbar"
-import { getUserStats, getUserPosts, ApiPost } from "@/lib/api"
+import { getUserStats, getUserPosts, getUserBadges, ApiPost, ApiBadge } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
-interface Badge {
-  id: string
-  name: string
-  description: string
-  icon: string
-  earned: boolean
-  rarity: "common" | "rare" | "legendary"
-}
+// Remove the old Badge interface since we're using ApiBadge from api.ts
 
 interface PostHistory {
   id: string
@@ -28,40 +21,7 @@ interface PostHistory {
   status: "active" | "expired"
 }
 
-const badges: Badge[] = [
-  {
-    id: "1",
-    name: "Tea Connoisseur",
-    description: "Spilled 50+ posts that got major reactions",
-    icon: "☕",
-    earned: true,
-    rarity: "rare"
-  },
-  {
-    id: "2", 
-    name: "Gossip Guru",
-    description: "Master of celebrity drama and hot takes",
-    icon: "👑",
-    earned: true,
-    rarity: "legendary"
-  },
-  {
-    id: "3",
-    name: "Movie Buff",
-    description: "Expert reviewer in Movies room",
-    icon: "🎬",
-    earned: true,
-    rarity: "common"
-  },
-  {
-    id: "4",
-    name: "Anonymous Legend",
-    description: "Been active for 100+ days",
-    icon: "👻",
-    earned: false,
-    rarity: "legendary"
-  }
-]
+// Remove static badges - will load dynamic badges from API
 
 const recentPosts: PostHistory[] = [
   {
@@ -99,6 +59,7 @@ export default function Profile() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [userStats, setUserStats] = useState<any>(null)
   const [userPosts, setUserPosts] = useState<ApiPost[]>([])
+  const [userBadges, setUserBadges] = useState<ApiBadge[]>([])
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
@@ -123,13 +84,15 @@ export default function Profile() {
       
       try {
         setLoading(true)
-        const [stats, posts] = await Promise.all([
+        const [stats, posts, badges] = await Promise.all([
           getUserStats(currentUser.id),
-          getUserPosts(currentUser.id)
+          getUserPosts(currentUser.id),
+          getUserBadges(currentUser.id)
         ])
         
         setUserStats(stats)
         setUserPosts(posts)
+        setUserBadges(badges)
       } catch (error) {
         console.error('Failed to load user data:', error)
         toast({
@@ -265,43 +228,61 @@ export default function Profile() {
             </TabsList>
 
             <TabsContent value="badges" className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-4">
-                {badges.map((badge, index) => (
-                  <Card 
-                    key={badge.id} 
-                    className={`tea-card ${badge.earned ? 'shadow-glow' : 'opacity-60'}`}
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-12 h-12 ${getBadgeRarityColor(badge.rarity)} rounded-full flex items-center justify-center text-2xl shadow-glow`}>
-                          {badge.icon}
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="mt-2 text-sm text-muted-foreground">Loading badges...</p>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {userBadges.map((badge, index) => (
+                    <Card 
+                      key={badge.id} 
+                      className={`tea-card ${badge.earned ? 'shadow-glow' : badge.meetsRequirements ? 'border-accent/50' : 'opacity-60'}`}
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center space-x-4">
+                          <div className={`w-12 h-12 ${getBadgeRarityColor(badge.rarity)} rounded-full flex items-center justify-center text-2xl shadow-glow`}>
+                            {badge.icon}
+                          </div>
+                          <div className="flex-1">
+                            <CardTitle className="text-lg flex items-center space-x-2">
+                              <span>{badge.name}</span>
+                              {badge.earned && <Award className="h-4 w-4 text-accent" />}
+                            </CardTitle>
+                            <Badge 
+                              variant="secondary" 
+                              className={`text-xs ${getBadgeRarityColor(badge.rarity)} text-white border-0`}
+                            >
+                              {badge.rarity}
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <CardTitle className="text-lg flex items-center space-x-2">
-                            <span>{badge.name}</span>
-                            {badge.earned && <Award className="h-4 w-4 text-accent" />}
-                          </CardTitle>
-                          <Badge 
-                            variant="secondary" 
-                            className={`text-xs ${getBadgeRarityColor(badge.rarity)} text-white border-0`}
-                          >
-                            {badge.rarity}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription>{badge.description}</CardDescription>
-                      {!badge.earned && (
-                        <div className="mt-3 text-xs text-muted-foreground">
-                          Keep spilling tea to unlock this badge!
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      </CardHeader>
+                      <CardContent>
+                        <CardDescription>{badge.description}</CardDescription>
+                        {badge.earned ? (
+                          <div className="mt-3 text-xs text-accent">
+                            Earned on {new Date(badge.earnedAt!).toLocaleDateString()}
+                          </div>
+                        ) : badge.meetsRequirements ? (
+                          <div className="mt-3 text-xs text-accent">
+                            Ready to earn! Check your activity.
+                          </div>
+                        ) : (
+                          <div className="mt-3 text-xs text-muted-foreground">
+                            Requirements: {badge.requirements.postsRequired > 0 && `${badge.requirements.postsRequired} posts`}
+                            {badge.requirements.reactionsRequired > 0 && `, ${badge.requirements.reactionsRequired} reactions`}
+                            {badge.requirements.daysActive > 0 && `, ${badge.requirements.daysActive} days active`}
+                            {badge.requirements.category && `, ${badge.requirements.category} posts`}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="posts" className="space-y-4">
