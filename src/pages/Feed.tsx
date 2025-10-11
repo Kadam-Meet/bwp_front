@@ -31,7 +31,7 @@ interface Post {
 export default function Feed() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<any>(undefined) // undefined = loading, null = no user, object = user
   const [userReactions, setUserReactions] = useState<Record<string, string>>({}) // postId -> reactionType
 
   // Save user reactions to localStorage whenever they change
@@ -67,8 +67,78 @@ export default function Feed() {
         console.error('Error parsing user data:', error)
         localStorage.removeItem('user')
       }
+    } else {
+      // No user data, set currentUser to null to trigger loadPosts
+      setCurrentUser(null)
     }
   }, [])
+
+  // Load posts after user is loaded (or determined to be null)
+  useEffect(() => {
+    if (currentUser !== undefined) { // Only run when currentUser state is set (including null)
+      loadPosts()
+    }
+  }, [currentUser])
+
+  const loadPosts = async () => {
+    try {
+      console.log('Loading posts from API...')
+      const apiPosts = await getPosts()
+      console.log('Received posts:', apiPosts.length)
+      
+      // Map API posts to UI shape
+      const uiPosts: Post[] = apiPosts.map((p) => ({
+        id: p.id,
+        authorId: p.authorId,
+        author: p.author.name,
+        alias: p.author.alias || "Anon",
+        content: p.content,
+        timestamp: new Date(p.createdAt).toLocaleString(),
+        duration: p.duration,
+        reactions: { tea: 0, spicy: 0, cap: 0, hearts: 0 }, // Start with zero reactions
+        replies: 0,
+        category: p.room.name,
+        isVoiceNote: p.isVoiceNote
+      }))
+      
+      setPosts(uiPosts)
+      console.log('Posts set:', uiPosts.length)
+      
+      // Load reactions for each post and user's reactions
+      for (const apiPost of apiPosts) {
+        try {
+          const userId = currentUser?.id || "demo-user-id"
+          const reactionData = await getPostReactions(apiPost.id, currentUser ? userId : undefined)
+          
+          // Update post reactions
+          setPosts(prevPosts => prevPosts.map(post => 
+            post.id === apiPost.id 
+              ? { ...post, reactions: reactionData.reactions }
+              : post
+          ))
+          
+          // Update user's reactions if they have one on this post
+          if (reactionData.userReaction) {
+            setUserReactions(prev => {
+              const newReactions = {
+                ...prev,
+                [apiPost.id]: reactionData.userReaction.reactionType
+              }
+              saveUserReactions(newReactions)
+              return newReactions
+            })
+          }
+        } catch (error) {
+          console.error('Failed to load reactions for post:', apiPost.id, error)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load posts:', error)
+      setPosts([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleReaction = async (postId: string, type: keyof Post['reactions']) => {
     if (!currentUser) {
@@ -105,15 +175,9 @@ export default function Feed() {
         // If user has a different reaction, update it
         if (currentReaction) {
           console.log(`🟡 [FEED] Updating reaction from ${currentReaction} to ${type}`)
-          // Remove old reaction count
-          setPosts(posts.map(post => 
-            post.id === postId 
-              ? { ...post, reactions: { ...post.reactions, [currentReaction]: Math.max(0, post.reactions[currentReaction] - 1) } }
-              : post
-          ))
         }
         
-        // Add new reaction
+        // Add new reaction (this will handle updating existing reaction on backend)
         await addReaction(postId, userId, type)
         
         // Update local state
@@ -122,11 +186,18 @@ export default function Feed() {
           saveUserReactions(newReactions)
           return newReactions
         })
-        setPosts(posts.map(post => 
-          post.id === postId 
-            ? { ...post, reactions: { ...post.reactions, [type]: post.reactions[type] + 1 } }
-            : post
-        ))
+        
+        // Reload reactions from server to get accurate counts
+        try {
+          const reactionData = await getPostReactions(postId, currentUser ? userId : undefined)
+          setPosts(prevPosts => prevPosts.map(post => 
+            post.id === postId 
+              ? { ...post, reactions: reactionData.reactions }
+              : post
+          ))
+        } catch (error) {
+          console.error('Failed to reload reactions:', error)
+        }
       }
     } catch (error) {
       console.error('Failed to handle reaction:', error)
@@ -141,69 +212,6 @@ export default function Feed() {
       default: return '❤️'
     }
   }
-  useEffect(() => {
-    const loadPosts = async () => {
-      try {
-        console.log('Loading posts from API...')
-        const apiPosts = await getPosts()
-        console.log('Received posts:', apiPosts.length)
-        
-        // Map API posts to UI shape
-        const uiPosts: Post[] = apiPosts.map((p) => ({
-          id: p.id,
-          authorId: p.authorId,
-          author: p.author.name,
-          alias: p.author.alias || "Anon",
-          content: p.content,
-          timestamp: new Date(p.createdAt).toLocaleString(),
-          duration: p.duration,
-          reactions: { tea: 0, spicy: 0, cap: 0, hearts: 0 }, // Start with zero reactions
-          replies: 0,
-          category: p.room.name,
-          isVoiceNote: p.isVoiceNote
-        }))
-        
-        setPosts(uiPosts)
-        console.log('Posts set:', uiPosts.length)
-        
-        // Load reactions for each post and user's reactions
-        for (const apiPost of apiPosts) {
-          try {
-            const userId = currentUser?.id || "demo-user-id"
-            const reactionData = await getPostReactions(apiPost.id, currentUser ? userId : undefined)
-            
-            // Update post reactions
-            setPosts(prevPosts => prevPosts.map(post => 
-              post.id === apiPost.id 
-                ? { ...post, reactions: reactionData.reactions }
-                : post
-            ))
-            
-            // Update user's reactions if they have one on this post
-            if (reactionData.userReaction) {
-              setUserReactions(prev => {
-                const newReactions = {
-                  ...prev,
-                  [apiPost.id]: reactionData.userReaction.reactionType
-                }
-                saveUserReactions(newReactions)
-                return newReactions
-              })
-            }
-          } catch (error) {
-            console.error('Failed to load reactions for post:', apiPost.id, error)
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load posts:', error)
-        setPosts([])
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    loadPosts()
-  }, [currentUser])
 
   const handleDelete = async (postId: string) => {
     try {
@@ -248,15 +256,17 @@ export default function Feed() {
           </div>
 
           {/* Loading State */}
-          {loading && (
+          {(loading || currentUser === undefined) && (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-2 text-sm text-muted-foreground">Loading posts...</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {currentUser === undefined ? 'Loading user...' : 'Loading posts...'}
+              </p>
             </div>
           )}
 
           {/* Posts */}
-          {!loading && (
+          {!loading && currentUser !== undefined && (
             <div className="space-y-6">
               {posts.length === 0 ? (
                 <div className="text-center py-12">
