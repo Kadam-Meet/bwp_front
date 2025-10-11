@@ -1,9 +1,28 @@
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { ArrowRight, MessageCircle, Shield, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useEffect } from "react"
 
 export default function Landing() {
+  const navigate = useNavigate()
+
+  // Redirect authenticated users to feed
+  useEffect(() => {
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      try {
+        const user = JSON.parse(userData)
+        if (user && user.id) {
+          console.log('🔵 [LANDING] User already authenticated, redirecting to feed')
+          navigate('/feed')
+        }
+      } catch (error) {
+        console.error('Error parsing user data:', error)
+        localStorage.removeItem('user')
+      }
+    }
+  }, [navigate])
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}

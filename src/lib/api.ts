@@ -232,6 +232,25 @@ export async function getRoom(roomId: string): Promise<ApiRoom & { recentPosts: 
   return res.json()
 }
 
+export async function createRoom(data: {
+  name: string
+  description: string
+  icon?: string
+  gradient?: string
+  category?: string
+}): Promise<ApiRoom> {
+  const res = await fetch(`${API_BASE}/rooms`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || "Failed to create room")
+  }
+  return res.json()
+}
+
 // Reactions API
 export async function addReaction(postId: string, userId: string, reactionType: 'tea' | 'spicy' | 'cap' | 'hearts') {
   const res = await fetch(`${API_BASE}/reactions`, {
@@ -257,6 +276,26 @@ export async function getPostReactions(postId: string, userId?: string): Promise
   const url = userId ? `${API_BASE}/reactions/${postId}?userId=${userId}` : `${API_BASE}/reactions/${postId}`
   const res = await fetch(url)
   if (!res.ok) throw new Error("Failed to fetch reactions")
+  return res.json()
+}
+
+// User Profile API
+export async function getUserPosts(userId: string): Promise<ApiPost[]> {
+  const res = await fetch(`${API_BASE}/posts?authorId=${userId}`)
+  if (!res.ok) throw new Error("Failed to fetch user posts")
+  return res.json()
+}
+
+export async function getUserStats(userId: string): Promise<{
+  totalPosts: number
+  totalReactions: number
+  topCategory: string
+  memberSince: string
+  streak: number
+  averageReactions: number
+}> {
+  const res = await fetch(`${API_BASE}/users/${userId}/stats`)
+  if (!res.ok) throw new Error("Failed to fetch user stats")
   return res.json()
 }
 

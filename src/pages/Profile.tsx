@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Edit2, Award, Clock, MessageCircle, TrendingUp, Calendar, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Navbar } from "@/components/layout/navbar"
+import { getUserStats, getUserPosts, ApiPost } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 interface Badge {
   id: string
@@ -94,13 +96,62 @@ const recentPosts: PostHistory[] = [
 export default function Profile() {
   const [currentAlias, setCurrentAlias] = useState("The Campus Oracle")
   const [isEditing, setIsEditing] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [userStats, setUserStats] = useState<any>(null)
+  const [userPosts, setUserPosts] = useState<ApiPost[]>([])
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
 
-  const stats = {
-    totalPosts: 147,
-    totalReactions: 12567,
-    topCategory: "Celeb Gossip",
-    memberSince: "March 2024",
-    streak: 23
+  // Load user from localStorage
+  useEffect(() => {
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      try {
+        const user = JSON.parse(userData)
+        setCurrentUser(user)
+        setCurrentAlias(user.alias || user.name)
+      } catch (error) {
+        console.error('Error parsing user data:', error)
+      }
+    }
+  }, [])
+
+  // Load user stats and posts
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!currentUser) return
+      
+      try {
+        setLoading(true)
+        const [stats, posts] = await Promise.all([
+          getUserStats(currentUser.id),
+          getUserPosts(currentUser.id)
+        ])
+        
+        setUserStats(stats)
+        setUserPosts(posts)
+      } catch (error) {
+        console.error('Failed to load user data:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load profile data",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadUserData()
+  }, [currentUser, toast])
+
+  const stats = userStats || {
+    totalPosts: 0,
+    totalReactions: 0,
+    topCategory: "General",
+    memberSince: "Unknown",
+    streak: 0,
+    averageReactions: 0
   }
 
   const getBadgeRarityColor = (rarity: string) => {
@@ -159,10 +210,10 @@ export default function Profile() {
                     </div>
                   )}
                   
-                  <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground">
+                    <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground">
                     <div className="flex items-center space-x-1">
                       <Shield className="h-4 w-4" />
-                      <span>Anonymous ID: #T3A7OK</span>
+                      <span>Anonymous ID: #{currentUser?.anonymousId || 'T3A7OK'}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <Calendar className="h-4 w-4" />
@@ -254,54 +305,67 @@ export default function Profile() {
             </TabsContent>
 
             <TabsContent value="posts" className="space-y-4">
-              {recentPosts.map((post, index) => (
-                <Card 
-                  key={post.id} 
-                  className={`tea-card ${post.status === 'expired' ? 'opacity-60' : ''}`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="secondary">{post.category}</Badge>
-                        <Badge 
-                          variant={post.status === 'active' ? 'default' : 'outline'}
-                          className={post.status === 'active' ? 'bg-accent text-accent-foreground' : ''}
-                        >
-                          {post.status}
-                        </Badge>
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="mt-2 text-sm text-muted-foreground">Loading posts...</p>
+                </div>
+              ) : userPosts.length === 0 ? (
+                <Card className="tea-card text-center py-12">
+                  <CardContent>
+                    <div className="text-4xl mb-4">☕</div>
+                    <h3 className="text-lg font-semibold mb-2">No posts yet</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Start spilling some tea to see your posts here!
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                userPosts.map((post, index) => (
+                  <Card 
+                    key={post.id} 
+                    className="tea-card"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="secondary">{post.category}</Badge>
+                          <Badge variant="default" className="bg-accent text-accent-foreground">
+                            Active
+                          </Badge>
+                        </div>
+                        <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                          <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        <span>{post.timestamp}</span>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="space-y-4">
-                    <p className="text-sm leading-relaxed">{post.content}</p>
+                    </CardHeader>
                     
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-1 text-accent">
-                          <TrendingUp className="h-4 w-4" />
-                          <span>{post.reactions}</span>
-                        </div>
-                        <div className="flex items-center space-x-1 text-muted-foreground">
-                          <MessageCircle className="h-4 w-4" />
-                          <span>{post.replies}</span>
-                        </div>
-                      </div>
+                    <CardContent className="space-y-4">
+                      <h3 className="font-semibold text-lg">{post.title}</h3>
+                      <p className="text-sm leading-relaxed">{post.content}</p>
                       
-                      {post.status === 'active' && (
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-1 text-accent">
+                            <TrendingUp className="h-4 w-4" />
+                            <span>0</span>
+                          </div>
+                          <div className="flex items-center space-x-1 text-muted-foreground">
+                            <MessageCircle className="h-4 w-4" />
+                            <span>0</span>
+                          </div>
+                        </div>
+                        
                         <Button variant="ghost" size="sm" className="hover-scale">
                           View Post
                         </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </TabsContent>
 
             <TabsContent value="activity" className="space-y-6">
@@ -318,11 +382,11 @@ export default function Profile() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Favorite Room</span>
-                      <span className="text-sm font-medium">Celeb Gossip</span>
+                      <span className="text-sm font-medium">{stats.topCategory}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Average Reactions per Post</span>
-                      <span className="text-sm font-medium">85.4</span>
+                      <span className="text-sm font-medium">{stats.averageReactions}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Reply Rate</span>
@@ -336,7 +400,7 @@ export default function Profile() {
                 <CardContent className="p-6 text-center">
                   <h3 className="text-xl font-semibold mb-2">Keep the Tea Flowing!</h3>
                   <p className="text-white/90 mb-4">
-                    You're doing great! Your posts generate {Math.round(stats.totalReactions / stats.totalPosts)} average reactions.
+                    You're doing great! Your posts generate {stats.averageReactions} average reactions.
                   </p>
                   <Button variant="secondary" className="hover-scale shadow-soft">
                     Spill More Tea

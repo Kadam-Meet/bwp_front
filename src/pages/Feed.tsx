@@ -31,7 +31,7 @@ interface Post {
 export default function Feed() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentUser, setCurrentUser] = useState<any>(undefined) // undefined = loading, null = no user, object = user
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [userReactions, setUserReactions] = useState<Record<string, string>>({}) // postId -> reactionType
 
   // Save user reactions to localStorage whenever they change
@@ -42,7 +42,7 @@ export default function Feed() {
     }
   }
 
-  // Load user from localStorage on component mount
+  // Load user from localStorage on component mount (since we're in ProtectedRoute, user should exist)
   useEffect(() => {
     const userData = localStorage.getItem('user')
     if (userData) {
@@ -63,22 +63,20 @@ export default function Feed() {
             localStorage.removeItem(`userReactions_${user.id}`)
           }
         }
+        
+        // Load posts after user is loaded
+        loadPosts()
       } catch (error) {
         console.error('Error parsing user data:', error)
         localStorage.removeItem('user')
+        // Redirect to auth (this shouldn't happen in ProtectedRoute, but just in case)
+        window.location.href = '/auth'
       }
     } else {
-      // No user data, set currentUser to null to trigger loadPosts
-      setCurrentUser(null)
+      // This shouldn't happen in ProtectedRoute, but just in case
+      window.location.href = '/auth'
     }
   }, [])
-
-  // Load posts after user is loaded (or determined to be null)
-  useEffect(() => {
-    if (currentUser !== undefined) { // Only run when currentUser state is set (including null)
-      loadPosts()
-    }
-  }, [currentUser])
 
   const loadPosts = async () => {
     try {
@@ -256,17 +254,15 @@ export default function Feed() {
           </div>
 
           {/* Loading State */}
-          {(loading || currentUser === undefined) && (
+          {loading && (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {currentUser === undefined ? 'Loading user...' : 'Loading posts...'}
-              </p>
+              <p className="mt-2 text-sm text-muted-foreground">Loading posts...</p>
             </div>
           )}
 
           {/* Posts */}
-          {!loading && currentUser !== undefined && (
+          {!loading && (
             <div className="space-y-6">
               {posts.length === 0 ? (
                 <div className="text-center py-12">

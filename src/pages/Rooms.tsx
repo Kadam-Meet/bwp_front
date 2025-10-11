@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
-import { Search, TrendingUp, Users, Clock, ArrowRight } from "lucide-react"
+import { Search, TrendingUp, Users, Clock, ArrowRight, Plus, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Navbar } from "@/components/layout/navbar"
-import { getRooms, ApiRoom } from "@/lib/api"
+import { getRooms, createRoom, ApiRoom } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 interface Room {
   id: string
@@ -27,6 +32,16 @@ export default function Rooms() {
   const [rooms, setRooms] = useState<ApiRoom[]>([])
   const [filteredRooms, setFilteredRooms] = useState<ApiRoom[]>([])
   const [loading, setLoading] = useState(true)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
+  const [newRoom, setNewRoom] = useState({
+    name: "",
+    description: "",
+    icon: "🏠",
+    gradient: "bg-gradient-to-br from-blue-500 to-purple-600",
+    category: "General"
+  })
+  const { toast } = useToast()
 
   // Load rooms on component mount
   useEffect(() => {
@@ -59,6 +74,57 @@ export default function Rooms() {
   }
 
   const trendingRooms = rooms.filter(room => room.isTrending)
+
+  const handleCreateRoom = async () => {
+    if (!newRoom.name.trim() || !newRoom.description.trim()) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsCreating(true)
+    try {
+      const createdRoom = await createRoom(newRoom)
+      setRooms(prev => [createdRoom, ...prev])
+      setFilteredRooms(prev => [createdRoom, ...prev])
+      setIsCreateDialogOpen(false)
+      setNewRoom({
+        name: "",
+        description: "",
+        icon: "🏠",
+        gradient: "bg-gradient-to-br from-blue-500 to-purple-600",
+        category: "General"
+      })
+      toast({
+        title: "Success",
+        description: `Room "${createdRoom.name}" created successfully!`
+      })
+    } catch (error) {
+      console.error('Failed to create room:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create room",
+        variant: "destructive"
+      })
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  const roomIcons = ["🏠", "🎬", "🎵", "🎮", "📚", "💻", "🏃", "🍕", "✈️", "🎨", "🔬", "💡", "🌟", "🔥", "💎"]
+  const roomGradients = [
+    "bg-gradient-to-br from-blue-500 to-purple-600",
+    "bg-gradient-to-br from-pink-500 to-rose-600",
+    "bg-gradient-to-br from-green-500 to-emerald-600",
+    "bg-gradient-to-br from-orange-500 to-red-600",
+    "bg-gradient-to-br from-purple-500 to-indigo-600",
+    "bg-gradient-to-br from-teal-500 to-cyan-600",
+    "bg-gradient-to-br from-yellow-500 to-orange-600",
+    "bg-gradient-to-br from-red-500 to-pink-600"
+  ]
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
@@ -158,6 +224,110 @@ export default function Rooms() {
                 <h2 className="text-xl font-semibold">
                   {searchQuery ? `Search Results (${filteredRooms.length})` : "All Rooms"}
                 </h2>
+                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="spill-button hover-scale">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Room
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Create New Room</DialogTitle>
+                      <DialogDescription>
+                        Create a new topic room where people can share tea and connect.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="name">Room Name *</Label>
+                        <Input
+                          id="name"
+                          value={newRoom.name}
+                          onChange={(e) => setNewRoom(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="Enter room name..."
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="description">Description *</Label>
+                        <Textarea
+                          id="description"
+                          value={newRoom.description}
+                          onChange={(e) => setNewRoom(prev => ({ ...prev, description: e.target.value }))}
+                          placeholder="Describe what this room is about..."
+                          rows={3}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="category">Category</Label>
+                        <Select value={newRoom.category} onValueChange={(value) => setNewRoom(prev => ({ ...prev, category: value }))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="General">General</SelectItem>
+                            <SelectItem value="Entertainment">Entertainment</SelectItem>
+                            <SelectItem value="Gaming">Gaming</SelectItem>
+                            <SelectItem value="Technology">Technology</SelectItem>
+                            <SelectItem value="Sports">Sports</SelectItem>
+                            <SelectItem value="Music">Music</SelectItem>
+                            <SelectItem value="Movies">Movies</SelectItem>
+                            <SelectItem value="Books">Books</SelectItem>
+                            <SelectItem value="Food">Food</SelectItem>
+                            <SelectItem value="Travel">Travel</SelectItem>
+                            <SelectItem value="Fashion">Fashion</SelectItem>
+                            <SelectItem value="Health">Health</SelectItem>
+                            <SelectItem value="Education">Education</SelectItem>
+                            <SelectItem value="Business">Business</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Room Icon</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {roomIcons.map((icon) => (
+                            <Button
+                              key={icon}
+                              variant={newRoom.icon === icon ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setNewRoom(prev => ({ ...prev, icon }))}
+                              className="w-10 h-10 p-0"
+                            >
+                              {icon}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Room Theme</Label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {roomGradients.map((gradient) => (
+                            <Button
+                              key={gradient}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setNewRoom(prev => ({ ...prev, gradient }))}
+                              className={`h-12 p-0 ${gradient} ${newRoom.gradient === gradient ? 'ring-2 ring-primary' : ''}`}
+                            >
+                              <div className="w-full h-full rounded flex items-center justify-center text-white text-lg">
+                                {newRoom.icon}
+                              </div>
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleCreateRoom} disabled={isCreating} className="spill-button">
+                        {isCreating ? "Creating..." : "Create Room"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
