@@ -73,7 +73,14 @@ export default function Auth() {
       // Store user data in localStorage for session management
       localStorage.setItem('user', JSON.stringify(user))
       
-      navigate('/feed')
+      // Check if there's a redirect path stored
+      const redirectPath = localStorage.getItem('redirectAfterLogin')
+      if (redirectPath && redirectPath !== '/auth') {
+        localStorage.removeItem('redirectAfterLogin')
+        navigate(redirectPath)
+      } else {
+        navigate('/feed')
+      }
     } catch (error) {
       console.error('Authentication error:', error)
       toast({

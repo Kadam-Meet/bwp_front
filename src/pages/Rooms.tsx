@@ -38,8 +38,7 @@ export default function Rooms() {
     name: "",
     description: "",
     icon: "🏠",
-    gradient: "bg-gradient-to-br from-blue-500 to-purple-600",
-    category: "General"
+    gradient: "bg-gradient-to-br from-blue-500 to-purple-600"
   })
   const { toast } = useToast()
 
@@ -95,8 +94,7 @@ export default function Rooms() {
         name: "",
         description: "",
         icon: "🏠",
-        gradient: "bg-gradient-to-br from-blue-500 to-purple-600",
-        category: "General"
+        gradient: "bg-gradient-to-br from-blue-500 to-purple-600"
       })
       toast({
         title: "Success",
@@ -199,10 +197,10 @@ export default function Rooms() {
                             <Users className="h-3 w-3" />
                             <span>{room.memberCount.toLocaleString()}</span>
                           </div>
-                          <div className="flex items-center space-x-1">
-                            <Clock className="h-3 w-3" />
-                            <span>{room.lastActivity}</span>
-                          </div>
+                        <div className="flex items-center space-x-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{room.lastActivity ? new Date(room.lastActivity).toLocaleDateString() : 'No activity'}</span>
+                        </div>
                         </div>
                         <div className="mt-3 p-2 bg-muted/50 rounded-lg">
                           <div className="text-xs font-medium text-accent">
@@ -257,31 +255,6 @@ export default function Rooms() {
                           placeholder="Describe what this room is about..."
                           rows={3}
                         />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="category">Category</Label>
-                        <Select value={newRoom.category} onValueChange={(value) => setNewRoom(prev => ({ ...prev, category: value }))}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="General">General</SelectItem>
-                            <SelectItem value="Entertainment">Entertainment</SelectItem>
-                            <SelectItem value="Gaming">Gaming</SelectItem>
-                            <SelectItem value="Technology">Technology</SelectItem>
-                            <SelectItem value="Sports">Sports</SelectItem>
-                            <SelectItem value="Music">Music</SelectItem>
-                            <SelectItem value="Movies">Movies</SelectItem>
-                            <SelectItem value="Books">Books</SelectItem>
-                            <SelectItem value="Food">Food</SelectItem>
-                            <SelectItem value="Travel">Travel</SelectItem>
-                            <SelectItem value="Fashion">Fashion</SelectItem>
-                            <SelectItem value="Health">Health</SelectItem>
-                            <SelectItem value="Education">Education</SelectItem>
-                            <SelectItem value="Business">Business</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
                       </div>
                       <div className="grid gap-2">
                         <Label>Room Icon</Label>
@@ -379,7 +352,7 @@ export default function Rooms() {
                       <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border">
                         <div className="flex items-center space-x-1">
                           <Clock className="h-3 w-3" />
-                          <span>Active {room.lastActivity}</span>
+                          <span>Active {room.lastActivity ? new Date(room.lastActivity).toLocaleDateString() : 'Never'}</span>
                         </div>
                         <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>

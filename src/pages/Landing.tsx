@@ -7,10 +7,10 @@ import { useEffect } from "react"
 export default function Landing() {
   const navigate = useNavigate()
 
-  // Redirect authenticated users to feed
+  // Only redirect to feed if user is on the root path and authenticated
   useEffect(() => {
     const userData = localStorage.getItem('user')
-    if (userData) {
+    if (userData && window.location.pathname === '/') {
       try {
         const user = JSON.parse(userData)
         if (user && user.id) {

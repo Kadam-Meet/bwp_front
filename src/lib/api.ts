@@ -237,7 +237,6 @@ export async function createRoom(data: {
   description: string
   icon?: string
   gradient?: string
-  category?: string
 }): Promise<ApiRoom> {
   const res = await fetch(`${API_BASE}/rooms`, {
     method: "POST",

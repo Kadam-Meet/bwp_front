@@ -180,6 +180,18 @@ export default function RoomDetail() {
     return `${Math.floor(diffInSeconds / 86400)}d ago`
   }
 
+  const formatLastActivity = (dateString: string | null) => {
+    if (!dateString) return 'No activity'
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+    
+    if (diffInDays === 0) return 'Today'
+    if (diffInDays === 1) return 'Yesterday'
+    if (diffInDays < 7) return `${diffInDays} days ago`
+    return date.toLocaleDateString()
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background pb-20 md:pb-8">

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -9,6 +9,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
     const checkAuth = () => {
@@ -22,15 +23,21 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
           } else {
             console.log('🔴 [AUTH] Invalid user data, redirecting to login')
             localStorage.removeItem('user')
+            // Store the current path to redirect back after login
+            localStorage.setItem('redirectAfterLogin', location.pathname)
             navigate('/auth')
           }
         } else {
           console.log('🔴 [AUTH] No user data found, redirecting to login')
+          // Store the current path to redirect back after login
+          localStorage.setItem('redirectAfterLogin', location.pathname)
           navigate('/auth')
         }
       } catch (error) {
         console.error('🔴 [AUTH] Error checking authentication:', error)
         localStorage.removeItem('user')
+        // Store the current path to redirect back after login
+        localStorage.setItem('redirectAfterLogin', location.pathname)
         navigate('/auth')
       } finally {
         setIsLoading(false)
@@ -38,7 +45,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     }
 
     checkAuth()
-  }, [navigate])
+  }, [navigate, location.pathname])
 
   if (isLoading) {
     return (
