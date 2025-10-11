@@ -34,6 +34,14 @@ export default function Feed() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [userReactions, setUserReactions] = useState<Record<string, string>>({}) // postId -> reactionType
 
+  // Save user reactions to localStorage whenever they change
+  const saveUserReactions = (reactions: Record<string, string>) => {
+    if (currentUser) {
+      localStorage.setItem(`userReactions_${currentUser.id}`, JSON.stringify(reactions))
+      console.log('🔵 [FEED] User reactions saved to localStorage:', reactions)
+    }
+  }
+
   // Load user from localStorage on component mount
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -42,6 +50,19 @@ export default function Feed() {
         const user = JSON.parse(userData)
         setCurrentUser(user)
         console.log('🔵 [FEED] User loaded from localStorage:', user)
+        
+        // Load user reactions from localStorage
+        const savedReactions = localStorage.getItem(`userReactions_${user.id}`)
+        if (savedReactions) {
+          try {
+            const reactions = JSON.parse(savedReactions)
+            setUserReactions(reactions)
+            console.log('🔵 [FEED] User reactions loaded from localStorage:', reactions)
+          } catch (error) {
+            console.error('Error parsing user reactions:', error)
+            localStorage.removeItem(`userReactions_${user.id}`)
+          }
+        }
       } catch (error) {
         console.error('Error parsing user data:', error)
         localStorage.removeItem('user')
@@ -71,6 +92,7 @@ export default function Feed() {
         setUserReactions(prev => {
           const newReactions = { ...prev }
           delete newReactions[postId]
+          saveUserReactions(newReactions)
           return newReactions
         })
         
@@ -95,7 +117,11 @@ export default function Feed() {
         await addReaction(postId, userId, type)
         
         // Update local state
-        setUserReactions(prev => ({ ...prev, [postId]: type }))
+        setUserReactions(prev => {
+          const newReactions = { ...prev, [postId]: type }
+          saveUserReactions(newReactions)
+          return newReactions
+        })
         setPosts(posts.map(post => 
           post.id === postId 
             ? { ...post, reactions: { ...post.reactions, [type]: post.reactions[type] + 1 } }
@@ -144,7 +170,7 @@ export default function Feed() {
         for (const apiPost of apiPosts) {
           try {
             const userId = currentUser?.id || "demo-user-id"
-            const reactionData = await getPostReactions(apiPost.id)
+            const reactionData = await getPostReactions(apiPost.id, currentUser ? userId : undefined)
             
             // Update post reactions
             setPosts(prevPosts => prevPosts.map(post => 
@@ -155,10 +181,14 @@ export default function Feed() {
             
             // Update user's reactions if they have one on this post
             if (reactionData.userReaction) {
-              setUserReactions(prev => ({
-                ...prev,
-                [apiPost.id]: reactionData.userReaction.reactionType
-              }))
+              setUserReactions(prev => {
+                const newReactions = {
+                  ...prev,
+                  [apiPost.id]: reactionData.userReaction.reactionType
+                }
+                saveUserReactions(newReactions)
+                return newReactions
+              })
             }
           } catch (error) {
             console.error('Failed to load reactions for post:', apiPost.id, error)
@@ -172,9 +202,7 @@ export default function Feed() {
       }
     }
     
-    if (currentUser) {
-      loadPosts()
-    }
+    loadPosts()
   }, [currentUser])
 
   const handleDelete = async (postId: string) => {

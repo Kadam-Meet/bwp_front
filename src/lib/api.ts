@@ -253,8 +253,9 @@ export async function removeReaction(postId: string, userId: string, reactionTyp
   return res.json()
 }
 
-export async function getPostReactions(postId: string): Promise<{ reactions: ApiReaction; totalReactions: number }> {
-  const res = await fetch(`${API_BASE}/reactions/${postId}`)
+export async function getPostReactions(postId: string, userId?: string): Promise<{ reactions: ApiReaction; totalReactions: number; userReaction?: { reactionType: string; createdAt: string } }> {
+  const url = userId ? `${API_BASE}/reactions/${postId}?userId=${userId}` : `${API_BASE}/reactions/${postId}`
+  const res = await fetch(url)
   if (!res.ok) throw new Error("Failed to fetch reactions")
   return res.json()
 }
