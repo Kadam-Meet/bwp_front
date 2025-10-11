@@ -117,7 +117,13 @@ export async function createPost(data: {
   return res.json()
 }
 
-export type ApiUser = { id: string; name: string; email: string }
+export type ApiUser = { 
+  id: string; 
+  name: string; 
+  email: string; 
+  alias?: string | null; 
+  anonymousId?: string | null; 
+}
 
 export async function getUsers(): Promise<ApiUser[]> {
   const res = await fetch(`${API_BASE}/users`)
@@ -126,34 +132,90 @@ export async function getUsers(): Promise<ApiUser[]> {
 }
 
 export async function createUser(data: { name: string; email: string; password: string }): Promise<ApiUser> {
+  console.log('🔵 [FRONTEND] Creating user with data:', { ...data, password: '[HIDDEN]' });
+  
   const res = await fetch(`${API_BASE}/users`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   })
-  if (!res.ok) throw new Error("Failed to create user")
-  return res.json()
+  
+  console.log('🔵 [FRONTEND] Create user response status:', res.status);
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    console.error('❌ [FRONTEND] Create user failed:', errorData);
+    throw new Error(errorData.error || "Failed to create user")
+  }
+  
+  const userData = await res.json();
+  console.log('✅ [FRONTEND] User created successfully:', userData);
+  return userData;
 }
 
-export async function loginUser(data: { email: string; password: string }): Promise<ApiUser & { alias?: string | null; anonymousId?: string | null }> {
+export async function loginUser(data: { email: string; password: string }): Promise<ApiUser> {
+  console.log('🔵 [FRONTEND] Logging in user with email:', data.email);
+  
   const res = await fetch(`${API_BASE}/users/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   })
+  
+  console.log('🔵 [FRONTEND] Login response status:', res.status);
+  
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'unknown' }))
-    throw new Error(err.error || 'login_failed')
+    const errorData = await res.json().catch(() => ({}));
+    console.error('❌ [FRONTEND] Login failed:', errorData);
+    throw new Error(errorData.error || "Failed to login")
   }
-  return res.json()
+  
+  const userData = await res.json();
+  console.log('✅ [FRONTEND] Login successful:', userData);
+  return userData;
 }
 
-export async function createAnonymous(): Promise<{ id: string | null; name: string; email: null; alias: string; anonymousId: string }> {
+export async function createAnonymousUser(): Promise<ApiUser> {
+  console.log('🔵 [FRONTEND] Creating anonymous user');
+  
   const res = await fetch(`${API_BASE}/users/anonymous`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
   })
-  if (!res.ok) throw new Error("Failed to create anonymous user")
-  return res.json()
+  
+  console.log('🔵 [FRONTEND] Anonymous user response status:', res.status);
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    console.error('❌ [FRONTEND] Anonymous user creation failed:', errorData);
+    throw new Error(errorData.error || "Failed to create anonymous user")
+  }
+  
+  const userData = await res.json();
+  console.log('✅ [FRONTEND] Anonymous user created successfully:', userData);
+  return userData;
+}
+
+export async function logoutUser(userId: string): Promise<{ message: string; isDemo?: boolean }> {
+  console.log('🔵 [FRONTEND] Logging out user with ID:', userId);
+  
+  const res = await fetch(`${API_BASE}/users/logout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId }),
+  })
+  
+  console.log('🔵 [FRONTEND] Logout response status:', res.status);
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    console.error('❌ [FRONTEND] Logout failed:', errorData);
+    throw new Error(errorData.error || "Failed to logout")
+  }
+  
+  const logoutData = await res.json();
+  console.log('✅ [FRONTEND] Logout successful:', logoutData);
+  return logoutData;
 }
 
 // Rooms API

@@ -1,12 +1,60 @@
-import { Link, useLocation } from "react-router-dom"
-import { Home, Plus, Search, Settings, User, Video } from "lucide-react"
+import { Link, useLocation, useNavigate } from "react-router-dom"
+import { Home, Plus, Search, Settings, User, Video, LogOut } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { logoutUser } from "@/lib/api"
+import { useState, useEffect } from "react"
 
 export function Navbar() {
   const location = useLocation()
-  const userRaw = typeof window !== 'undefined' ? localStorage.getItem('teatok_user') : null
-  const user = userRaw ? JSON.parse(userRaw) as { name?: string; alias?: string | null; isAnonymous?: boolean } : null
+  const navigate = useNavigate()
+  const { toast } = useToast()
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  
+  // Load user from localStorage on component mount
+  useEffect(() => {
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      try {
+        setCurrentUser(JSON.parse(userData))
+      } catch (error) {
+        console.error('Error parsing user data:', error)
+        localStorage.removeItem('user')
+      }
+    }
+  }, [])
+  
+  const handleLogout = async () => {
+    if (!currentUser) return
+    
+    setIsLoggingOut(true)
+    try {
+      await logoutUser(currentUser.id)
+      
+      // Clear user data from localStorage
+      localStorage.removeItem('user')
+      setCurrentUser(null)
+      
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account.",
+      })
+      
+      // Navigate to home page
+      navigate('/')
+    } catch (error) {
+      console.error('Logout error:', error)
+      toast({
+        title: "Logout failed",
+        description: "There was an error logging out. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
   
   const navItems = [
     { name: "Feed", href: "/feed", icon: Home },
@@ -54,10 +102,27 @@ export function Navbar() {
 
         {/* Right side actions */}
         <div className="flex items-center space-x-3">
-          {user && (
-            <span className="text-sm text-muted-foreground hidden md:inline">{user.alias || user.name}</span>
-          )}
           <ThemeToggle />
+          
+          {/* User info and logout */}
+          {currentUser && (
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-muted-foreground hidden md:block">
+                {currentUser.name || currentUser.alias || 'User'}
+              </span>
+              <Button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                variant="outline"
+                size="sm"
+                className="hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <LogOut className="h-4 w-4 mr-1" />
+                {isLoggingOut ? "Logging out..." : "Logout"}
+              </Button>
+            </div>
+          )}
+          
           <Button 
             asChild 
             className="spill-button animate-pulse-glow hidden sm:flex"
@@ -90,6 +155,19 @@ export function Navbar() {
               </Link>
             )
           })}
+          
+          {/* Mobile logout button */}
+          {currentUser && (
+            <button
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="flex flex-col items-center p-3 rounded-lg transition-smooth text-muted-foreground hover:text-destructive"
+            >
+              <LogOut className="h-5 w-5 mb-1" />
+              <span className="text-xs font-medium">Logout</span>
+            </button>
+          )}
+          
           <Button 
             asChild 
             size="icon"
