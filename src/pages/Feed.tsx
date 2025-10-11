@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge as UiBadge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/navbar"
-import { getPosts, getPostReactions, addReaction, deletePost as apiDeletePost } from "@/lib/api"
+import { getPosts, getPostReactions, addReaction, removeReaction, deletePost as apiDeletePost } from "@/lib/api"
 
 interface Post {
   id: string
@@ -31,24 +31,79 @@ interface Post {
 export default function Feed() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
-  const currentUserId = (typeof window !== 'undefined' && (localStorage.getItem('userId') || localStorage.getItem('anonymousUserId'))) || ""
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [userReactions, setUserReactions] = useState<Record<string, string>>({}) // postId -> reactionType
+
+  // Load user from localStorage on component mount
+  useEffect(() => {
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      try {
+        const user = JSON.parse(userData)
+        setCurrentUser(user)
+        console.log('🔵 [FEED] User loaded from localStorage:', user)
+      } catch (error) {
+        console.error('Error parsing user data:', error)
+        localStorage.removeItem('user')
+      }
+    }
+  }, [])
 
   const handleReaction = async (postId: string, type: keyof Post['reactions']) => {
+    if (!currentUser) {
+      console.log('🔴 [FEED] No user logged in, cannot react')
+      return
+    }
+
     try {
-      // For demo purposes, we'll use a dummy userId
-      // In a real app, this would come from authentication
-      const userId = "demo-user-id"
+      const userId = currentUser.id || "demo-user-id"
+      const currentReaction = userReactions[postId]
       
-      await addReaction(postId, userId, type)
+      console.log(`🔵 [FEED] Handling reaction: ${type} for post ${postId}`)
+      console.log(`🔵 [FEED] Current user reaction: ${currentReaction}`)
       
-      // Update local state optimistically
-      setPosts(posts.map(post => 
-        post.id === postId 
-          ? { ...post, reactions: { ...post.reactions, [type]: post.reactions[type] + 1 } }
-          : post
-      ))
+      // If user already has this reaction, remove it
+      if (currentReaction === type) {
+        console.log(`🟡 [FEED] Removing existing reaction: ${type}`)
+        await removeReaction(postId, userId, type)
+        
+        // Update local state
+        setUserReactions(prev => {
+          const newReactions = { ...prev }
+          delete newReactions[postId]
+          return newReactions
+        })
+        
+        setPosts(posts.map(post => 
+          post.id === postId 
+            ? { ...post, reactions: { ...post.reactions, [type]: Math.max(0, post.reactions[type] - 1) } }
+            : post
+        ))
+      } else {
+        // If user has a different reaction, update it
+        if (currentReaction) {
+          console.log(`🟡 [FEED] Updating reaction from ${currentReaction} to ${type}`)
+          // Remove old reaction count
+          setPosts(posts.map(post => 
+            post.id === postId 
+              ? { ...post, reactions: { ...post.reactions, [currentReaction]: Math.max(0, post.reactions[currentReaction] - 1) } }
+              : post
+          ))
+        }
+        
+        // Add new reaction
+        await addReaction(postId, userId, type)
+        
+        // Update local state
+        setUserReactions(prev => ({ ...prev, [postId]: type }))
+        setPosts(posts.map(post => 
+          post.id === postId 
+            ? { ...post, reactions: { ...post.reactions, [type]: post.reactions[type] + 1 } }
+            : post
+        ))
+      }
     } catch (error) {
-      console.error('Failed to add reaction:', error)
+      console.error('Failed to handle reaction:', error)
     }
   }
 
@@ -85,15 +140,26 @@ export default function Feed() {
         setPosts(uiPosts)
         console.log('Posts set:', uiPosts.length)
         
-        // Load reactions for each post (simplified)
+        // Load reactions for each post and user's reactions
         for (const apiPost of apiPosts) {
           try {
+            const userId = currentUser?.id || "demo-user-id"
             const reactionData = await getPostReactions(apiPost.id)
+            
+            // Update post reactions
             setPosts(prevPosts => prevPosts.map(post => 
               post.id === apiPost.id 
                 ? { ...post, reactions: reactionData.reactions }
                 : post
             ))
+            
+            // Update user's reactions if they have one on this post
+            if (reactionData.userReaction) {
+              setUserReactions(prev => ({
+                ...prev,
+                [apiPost.id]: reactionData.userReaction.reactionType
+              }))
+            }
           } catch (error) {
             console.error('Failed to load reactions for post:', apiPost.id, error)
           }
@@ -106,15 +172,17 @@ export default function Feed() {
       }
     }
     
-    loadPosts()
-  }, [])
+    if (currentUser) {
+      loadPosts()
+    }
+  }, [currentUser])
 
   const handleDelete = async (postId: string) => {
     try {
-      if (!currentUserId) return
+      if (!currentUser) return
       const confirmed = window.confirm('Delete this post? This cannot be undone.')
       if (!confirmed) return
-      await apiDeletePost(postId, currentUserId)
+      await apiDeletePost(postId, currentUser.id)
       setPosts(prev => prev.filter(p => p.id !== postId))
     } catch (error) {
       console.error('Failed to delete post:', error)
@@ -194,7 +262,7 @@ export default function Feed() {
                       <UiBadge variant="secondary" className="text-xs">
                         {post.category}
                       </UiBadge>
-                      {currentUserId && post.authorId && currentUserId === post.authorId ? (
+                      {currentUser && post.authorId && currentUser.id === post.authorId ? (
                         <Button
                           variant="destructive"
                           size="sm"
@@ -263,18 +331,23 @@ export default function Feed() {
                     {/* Reactions */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        {Object.entries(post.reactions).map(([type, count]) => (
-                          <Button
-                            key={type}
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleReaction(post.id, type as keyof Post['reactions'])}
-                            className="flex items-center space-x-1 hover-scale transition-smooth p-2 rounded-full"
-                          >
-                            <span className="text-base">{getReactionIcon(type)}</span>
-                            <span className="text-xs font-medium">{count}</span>
-                          </Button>
-                        ))}
+                        {Object.entries(post.reactions).map(([type, count]) => {
+                          const isUserReaction = userReactions[post.id] === type
+                          return (
+                            <Button
+                              key={type}
+                              variant={isUserReaction ? "default" : "ghost"}
+                              size="sm"
+                              onClick={() => handleReaction(post.id, type as keyof Post['reactions'])}
+                              className={`flex items-center space-x-1 hover-scale transition-smooth p-2 rounded-full ${
+                                isUserReaction ? 'bg-primary text-primary-foreground shadow-glow' : ''
+                              }`}
+                            >
+                              <span className="text-base">{getReactionIcon(type)}</span>
+                              <span className="text-xs font-medium">{count}</span>
+                            </Button>
+                          )
+                        })}
                       </div>
                       
                       <div className="flex items-center space-x-2">
